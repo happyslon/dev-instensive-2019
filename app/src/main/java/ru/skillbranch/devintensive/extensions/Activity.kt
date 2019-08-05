@@ -3,34 +3,33 @@ package ru.skillbranch.devintensive.extensions
 import android.app.Activity
 import android.content.Context
 import android.graphics.Rect
+import android.util.TypedValue
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 
-fun Activity.hideKeyboard() {
-    if (currentFocus != null) {
-        val inputMethodManager = getSystemService(
-            Context
-                .INPUT_METHOD_SERVICE
-        ) as InputMethodManager
-        inputMethodManager.hideSoftInputFromWindow(currentFocus!!.windowToken, 0)
-    }
+fun Activity.hideKeyboard(){
+    val inputMethodManager = this.getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+    inputMethodManager.hideSoftInputFromWindow(this.getCurrentFocus()?.getWindowToken(), 0)
 }
 
+fun Activity.getRootView(): View {
+    return findViewById<View>(android.R.id.content)
+}
+fun Context.convertDpToPx(dp: Float): Float {
+    return TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP,
+        dp,
+        this.resources.displayMetrics
+    )
+}
 fun Activity.isKeyboardOpen(): Boolean {
-    val activityRootView = this.window.decorView
-    val r = Rect()
-    //r will be populated with the coordinates of your view that area still visible.
-    activityRootView.getWindowVisibleDisplayFrame(r)
-
-    val heightDiff = activityRootView.rootView.height - (r.bottom - r.top)
-    return heightDiff > 100
+    val visibleBounds = Rect()
+    this.getRootView().getWindowVisibleDisplayFrame(visibleBounds)
+    val heightDiff = getRootView().height - visibleBounds.height()
+    val marginOfError = Math.round(this.convertDpToPx(50F))
+    return heightDiff > marginOfError
 }
 
 fun Activity.isKeyboardClosed(): Boolean {
-    val activityRootView = this.window.decorView
-    val r = Rect()
-    //r will be populated with the coordinates of your view that area still visible.
-    activityRootView.getWindowVisibleDisplayFrame(r)
-
-    val heightDiff = activityRootView.rootView.height - (r.bottom - r.top)
-    return heightDiff < 100
+    return !this.isKeyboardOpen()
 }

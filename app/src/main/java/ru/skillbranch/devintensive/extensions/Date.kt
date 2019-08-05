@@ -5,81 +5,48 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 
-const val SECOND = 1000L
-const val MINUTE = 60 * SECOND
-const val HOUR = 60 * MINUTE
-const val DAY = 24 * HOUR
-
-fun Date.format(pattern: String = "HH:mm:ss dd.MM.yy"): String {
+fun Date.format(pattern:String = "HH:mm:ss dd.MM.yy"):String {
     val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
     return dateFormat.format(this)
 }
 
-fun Date.add(value: Int, units: TimeUnits = TimeUnits.SECOND): Date {
-    var time = this.time
-
-    time += when (units) {
-        TimeUnits.SECOND -> value * SECOND
-        TimeUnits.MINUTE -> value * MINUTE
-        TimeUnits.HOUR -> value * HOUR
-        TimeUnits.DAY -> value * DAY
+fun Date.humanizeDiff(now:Date = Date()): String {
+    val diff:Long = now - this
+    return when (diff) {
+        in (Long.MIN_VALUE..TimeUnits.DAY*-360-1) -> "более чем через год"
+        in (TimeUnits.DAY*-360..TimeUnits.HOUR*-26-1) -> "через ${TimeUnits.DAY.plural(diff/86400000)}"
+        in (TimeUnits.HOUR*-26..TimeUnits.HOUR*-22-1) -> "через день"
+        in (TimeUnits.HOUR*-22..TimeUnits.MINUTE*-75-1) -> "через ${TimeUnits.HOUR.plural(diff/3600000)}"
+        in (TimeUnits.MINUTE*-75..TimeUnits.MINUTE*-45-1) -> "через час"
+        in (TimeUnits.MINUTE*-45..TimeUnits.SECOND*-75-1) -> "через ${TimeUnits.MINUTE.plural(diff/60000)}"
+        in (TimeUnits.SECOND*-75..TimeUnits.SECOND*-45-1) -> "через минуту"
+        in (TimeUnits.SECOND*-45..TimeUnits.SECOND*-1-1) -> "через несколько секунд"
+        in (TimeUnits.SECOND*-1..TimeUnits.SECOND*1) -> "только что"
+        in (TimeUnits.SECOND*1+1..TimeUnits.SECOND*45) -> "несколько секунд назад"
+        in (TimeUnits.SECOND*45+1..TimeUnits.SECOND*75) -> "минуту назад"
+        in (TimeUnits.SECOND*75+1..TimeUnits.MINUTE*45) -> "${TimeUnits.MINUTE.plural(diff/60000)} назад"
+        in (TimeUnits.MINUTE*45+1..TimeUnits.MINUTE*75) -> "час назад"
+        in (TimeUnits.MINUTE*75+1..TimeUnits.HOUR*22) -> "${TimeUnits.HOUR.plural(diff/3600000)} назад"
+        in (TimeUnits.HOUR*22+1..TimeUnits.HOUR*26) -> "день назад"
+        in (TimeUnits.HOUR*26+1..TimeUnits.DAY*360) -> "${TimeUnits.DAY.plural(diff/86400000)} назад"
+        in (TimeUnits.DAY*360+1..Long.MAX_VALUE) -> "более года назад"
+        else -> "никогда"
     }
-    this.time = time
-    return this
 }
 
-fun Date.humanizeDiff(date: Date = Date()): String {
-    val tempDiff: Long = (date.time / 1000 - this.time / 1000) * 1000
-    val diff = abs(tempDiff)
-    var result = ""
-    result += when {
-        diff <= 1 * SECOND -> "только что"
-        diff <= 45 * SECOND -> "несколько секунд"
-        diff <= 75 * SECOND -> "минуту"
-        diff <= 45 * MINUTE -> {
-            "${diff / MINUTE} " + if ((diff / MINUTE) in 10..19) "минут" else {
-                when ((diff / MINUTE).toInt() % 10) {
-                    1 -> "минуту"
-                    2, 3, 4 -> "минуты"
-                    0, 5, 6, 7, 8, 9 -> "минут"
-                    else -> throw IllegalStateException("invalid time")
-                }
-            }
-        }
-        diff <= 75 * MINUTE -> "час"
-        diff <= 22 * HOUR -> {
-            "${diff / HOUR} " + if ((diff / HOUR) in 10..19) "часов" else {
-                when ((diff / HOUR).toInt() % 10) {
-                    1 -> "час"
-                    2, 3, 4 -> "часа"
-                    0, 5, 6, 7, 8, 9 -> "часов"
-                    else -> throw IllegalStateException("invalid time")
-                }
-            }
-        }
-        diff <= 26 * HOUR -> "день"
-        diff <= 360 * DAY -> {
-            "${diff / DAY} " + if ((diff / DAY) in 10..19) "дней" else {
-                when ((diff / DAY).toInt() % 10) {
-                    1 -> "день"
-                    2, 3, 4 -> "дня"
-                    0, 5, 6, 7, 8, 9 -> "дней"
-                    else -> throw IllegalStateException("invalid time")
-                }
-            }
-        }
-        diff > 360 * DAY -> "более года"
-        else -> throw IllegalStateException("invalid time")
-    }
-    if (!result.contains("только что")) {
-        if (tempDiff >= 0) {
-            result += " назад"
-        } else {
-            result = "через $result"
-        }
-    }
-    if (result == "через более года") result = "более чем через год"
-    return result
+operator fun Date.minus(anoterDate:Date):Long = this.time - anoterDate.time
+
+operator fun Date.plusAssign(interval: Long) {
+    this.time += interval
+}
+
+operator fun Date.minusAssign(interval: Long) {
+    this.time -= interval
+}
+
+fun Date.add(value:Long, units: TimeUnits):Date {
+    this += units * value
+    return this
 }
 
 enum class TimeUnits {
@@ -88,48 +55,48 @@ enum class TimeUnits {
     HOUR,
     DAY;
 
-    fun plural(value: Int): String {
-        return when (this) {
-            SECOND -> {
-                "$value " + if (value in 10..19) "секунд" else {
-                    when (value % 10) {
-                        1 -> "секунду"
-                        2, 3, 4 -> "секунды"
-                        0, 5, 6, 7, 8, 9 -> "секунд"
-                        else -> throw IllegalStateException("invalid time")
-                    }
-                }
+    operator fun times(value: Long):Long {
+        return value * when(this) {
+            SECOND -> 1000L
+            MINUTE -> SECOND * 60
+            HOUR -> MINUTE * 60
+            DAY -> HOUR * 24
+        }
+    }
+
+    fun plural(value:Long):String {
+        return "${abs(value)} " + when (this) {
+            SECOND -> {when (pluralForm(value)) {
+                0 -> "секунду"
+                1 -> "секунды"
+                else -> "секунд"
             }
-            MINUTE -> {
-                "$value " + if (value in 10..19) "минут" else {
-                    when (value % 10) {
-                        1 -> "минуту"
-                        2, 3, 4 -> "минуты"
-                        0, 5, 6, 7, 8, 9 -> "минут"
-                        else -> throw IllegalStateException("invalid time")
-                    }
-                }
             }
-            HOUR -> {
-                "$value " + if (value in 10..19) "часов" else {
-                    when (value % 10) {
-                        1 -> "час"
-                        2, 3, 4 -> "часа"
-                        0, 5, 6, 7, 8, 9 -> "часов"
-                        else -> throw IllegalStateException("invalid time")
-                    }
-                }
+            MINUTE -> {when (pluralForm(value)) {
+                0 -> "минуту"
+                1 -> "минуты"
+                else -> "минут"
             }
-            DAY -> {
-                "$value " + if (value in 10..19) "дней" else {
-                    when (value % 10) {
-                        1 -> "день"
-                        2, 3, 4 -> "дня"
-                        0, 5, 6, 7, 8, 9 -> "дней"
-                        else -> throw IllegalStateException("invalid time")
-                    }
-                }
+            }
+            HOUR -> {when (pluralForm(value)) {
+                0 -> "час"
+                1 -> "часа"
+                else -> "часов"
+            }
+            }
+            DAY -> {when (pluralForm(value)) {
+                0 -> "день"
+                1 -> "дня"
+                else -> "дней"
+            }
             }
         }
+    }
+
+    private fun pluralForm(value:Long):Int {
+        val absvalue = abs(value)
+        return if (absvalue%10==1L && absvalue%100!=11L) 0
+        else if (absvalue%10>=2L && absvalue%10<=4L && (absvalue%100<10L || absvalue%100>=20L)) 1
+        else 2
     }
 }
