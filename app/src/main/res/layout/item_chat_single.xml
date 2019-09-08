@@ -40,7 +40,7 @@
             android:layout_marginStart="@dimen/spacing_normal_16"
             android:layout_marginEnd="@dimen/spacing_normal_16"
             android:layout_toEndOf="@id/iv_avatar_single"
-            android:layout_toStartOf="@id/tv_counter_single"
+            android:layout_toStartOf="@id/tv_count_single"
             android:layout_below="@id/tv_title_single"
             android:fontFamily="sans-serif-medium"
             android:textColor="?attr/colorText"
@@ -58,7 +58,7 @@
             tools:text="24:24"/>
 
     <TextView
-            android:id="@+id/tv_counter_single"
+            android:id="@+id/tv_count_single"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/counter_size"
             android:minWidth="@dimen/counter_size"
