@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/spacing_normal_16"
             android:layout_toEndOf="@id/tv_message_author"
-            android:layout_toStartOf="@id/tv_counter_group"
+            android:layout_toStartOf="@id/tv_count_group"
             android:layout_below="@id/tv_title_group"
             android:textColor="?attr/colorText"
             android:textSize="14sp"
