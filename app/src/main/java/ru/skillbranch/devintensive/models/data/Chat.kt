@@ -16,13 +16,13 @@ data class Chat(
     var isArchived: Boolean = false
 ) {
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun unreadableMessageCount(): Int {
-        return messages.filter { !it.isReaded }.size
+    fun lastMessageDate(): Date? {
+        return messages.lastOrNull()?.date
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    fun lastMessageDate(): Date? {
-        return messages.lastOrNull()?.date
+    fun unreadableMessageCount(): Int {
+        return messages.filter { !it.isReaded }.size
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
@@ -33,11 +33,9 @@ data class Chat(
             else -> "Сообщений еще нет" to ""
         }
 
-    private fun isSingle(): Boolean = members.size == 1
-
     fun toChatItem(): ChatItem {
+        val user = members.first()
         return if (isSingle()) {
-            val user = members.first()
             ChatItem(
                 id,
                 user.avatar,
@@ -52,7 +50,7 @@ data class Chat(
             ChatItem(
                 id,
                 null,
-                "",
+                Utils.toInitials(user.firstName, null) ?: "??",
                 title,
                 lastMessageShort().first,
                 unreadableMessageCount(),
@@ -63,9 +61,11 @@ data class Chat(
             )
         }
     }
+
+    private fun isSingle(): Boolean = members.size == 1
 }
 
-enum class ChatType{
+enum class ChatType {
     SINGLE,
     GROUP,
     ARCHIVE
