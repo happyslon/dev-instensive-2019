@@ -486,7 +486,7 @@ object DataGenerator {
         return when {
             isVisited -> {
                 val offset = (0..Short.MAX_VALUE).random()
-                Pair(Date().add((-offset).toLong(), TimeUnits.MINUTE), false)
+                Pair(Date().add(-offset, TimeUnits.MINUTE), false)
             }
 
             isNow -> Pair(Date(), true)

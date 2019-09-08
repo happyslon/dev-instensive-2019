@@ -2,126 +2,73 @@ package ru.skillbranch.devintensive.extensions
 
 
 
-import java.lang.IllegalStateException
 import java.text.SimpleDateFormat
-import java.time.DayOfWeek
 import java.util.*
-import kotlin.math.abs
+import ru.skillbranch.devintensive.extensions.TimeUnits.*
 
-
-const val SECOND = 1000L
-const val MINUTE = 60 * SECOND
-const val HOUR = 60 * MINUTE
-const val DAY = 24 * HOUR
-
-fun Date.format(pattern:String = "HH:mm:ss dd.MM.yy"):String {
-    val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
-    return dateFormat.format(this)
-}
-
-fun Date.shortFormat(): String {
-
-    val pattern = if (this.isSameDay(Date())) "HH:mm" else "dd.MM.yy"
-    val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
-    return dateFormat.format(this)
-
-}
-
-fun Date.isSameDay(date: Date): Boolean {
-
-    val day1 = this.time/ DAY
-    val day2 = date.time/ DAY
-    return day1 == day2
-
-}
-
-fun Date.humanizeDiff(now:Date = Date()): String {
-    val diff:Long = now - this
-    return when (diff) {
-        in (Long.MIN_VALUE..TimeUnits.DAY*-360-1) -> "более чем через год"
-        in (TimeUnits.DAY*-360..TimeUnits.HOUR*-26-1) -> "через ${TimeUnits.DAY.plural(diff/86400000)}"
-        in (TimeUnits.HOUR*-26..TimeUnits.HOUR*-22-1) -> "через день"
-        in (TimeUnits.HOUR*-22..TimeUnits.MINUTE*-75-1) -> "через ${TimeUnits.HOUR.plural(diff/3600000)}"
-        in (TimeUnits.MINUTE*-75..TimeUnits.MINUTE*-45-1) -> "через час"
-        in (TimeUnits.MINUTE*-45..TimeUnits.SECOND*-75-1) -> "через ${TimeUnits.MINUTE.plural(diff/60000)}"
-        in (TimeUnits.SECOND*-75..TimeUnits.SECOND*-45-1) -> "через минуту"
-        in (TimeUnits.SECOND*-45..TimeUnits.SECOND*-1-1) -> "через несколько секунд"
-        in (TimeUnits.SECOND*-1..TimeUnits.SECOND*1) -> "только что"
-        in (TimeUnits.SECOND*1+1..TimeUnits.SECOND*45) -> "несколько секунд назад"
-        in (TimeUnits.SECOND*45+1..TimeUnits.SECOND*75) -> "минуту назад"
-        in (TimeUnits.SECOND*75+1..TimeUnits.MINUTE*45) -> "${TimeUnits.MINUTE.plural(diff/60000)} назад"
-        in (TimeUnits.MINUTE*45+1..TimeUnits.MINUTE*75) -> "час назад"
-        in (TimeUnits.MINUTE*75+1..TimeUnits.HOUR*22) -> "${TimeUnits.HOUR.plural(diff/3600000)} назад"
-        in (TimeUnits.HOUR*22+1..TimeUnits.HOUR*26) -> "день назад"
-        in (TimeUnits.HOUR*26+1..TimeUnits.DAY*360) -> "${TimeUnits.DAY.plural(diff/86400000)} назад"
-        in (TimeUnits.DAY*360+1..Long.MAX_VALUE) -> "более года назад"
-        else -> "никогда"
-    }
-}
-
-operator fun Date.minus(anoterDate:Date):Long = this.time - anoterDate.time
-
-operator fun Date.plusAssign(interval: Long) {
-    this.time += interval
-}
-
-operator fun Date.minusAssign(interval: Long) {
-    this.time -= interval
-}
-
-fun Date.add(value:Long, units: TimeUnits):Date {
-    this += units * value
+fun Date.add(value: Int, units: TimeUnits = SECOND): Date {
+    this.time = this.time + (units.value * value)
     return this
 }
 
-enum class TimeUnits {
-    SECOND,
-    MINUTE,
-    HOUR,
-    DAY;
+fun Date.format(pattern: String = "HH:mm:ss dd.MM.yy"): String {
+    val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
+    return dateFormat.format(this)
+}
 
-    operator fun times(value: Long):Long {
-        return value * when(this) {
-            SECOND -> 1000L
-            MINUTE -> SECOND * 60
-            HOUR -> MINUTE * 60
-            DAY -> HOUR * 24
+fun Date.humanizeDiff(date: Date = Date()): String {
+    var prefix = ""
+    var postfix = ""
+
+    var diff = date.time - this.time
+
+    if (diff < 0){
+        prefix = "через "
+        diff = -diff
+    } else {
+        postfix = " назад"
+    }
+
+    return when(diff) {
+        in 0..1*SECOND.value -> "только что"
+        in 1*SECOND.value..45*SECOND.value -> "${prefix}несколько секунд$postfix"
+        in 45*SECOND.value..75*SECOND.value -> "${prefix}минуту$postfix"
+        in 75*SECOND.value..45*MINUTE.value -> "$prefix${MINUTE.plural(diff/MINUTE.value)}$postfix"
+        in 45*MINUTE.value..75*MINUTE.value -> "${prefix}час$postfix"
+        in 75*MINUTE.value..22*HOUR.value -> "$prefix${HOUR.plural(diff/HOUR.value)}$postfix"
+        in 22*HOUR.value..26*HOUR.value -> "${prefix}день$postfix"
+        in 26*HOUR.value..360*DAY.value -> "$prefix${DAY.plural(diff/DAY.value)}$postfix"
+        else -> if(date.time - this.time < 0) "более чем через год" else "более года назад"
+    }
+}
+
+enum class TimeUnits(val value: Long, private val ONE: String, private val FEW: String, private val MANY: String) {
+
+    SECOND(1000L,"секунду", "секунды", "секунд"),
+    MINUTE(1000L*60L, "минуту", "минуты", "минут"),
+    HOUR(1000L*60L*60L, "час", "часа", "часов"),
+    DAY(1000L*60L*60L*24L, "день", "дня", "дней");
+
+    fun plural(num: Long) : String {
+        return "$num ${this.getAmount(num)}"
+    }
+
+    private fun getAmount(num: Long) : String {
+        return when{
+            num in 5..20L -> MANY
+            num%10  == 1L  -> ONE
+            num%10 in 2..4L  -> FEW
+            else -> MANY
         }
     }
+}
 
-    fun plural(value:Long):String {
-        return "${abs(value)} " + when (this) {
-            SECOND -> {when (pluralForm(value)) {
-                0 -> "секунду"
-                1 -> "секунды"
-                else -> "секунд"
-            }
-            }
-            MINUTE -> {when (pluralForm(value)) {
-                0 -> "минуту"
-                1 -> "минуты"
-                else -> "минут"
-            }
-            }
-            HOUR -> {when (pluralForm(value)) {
-                0 -> "час"
-                1 -> "часа"
-                else -> "часов"
-            }
-            }
-            DAY -> {when (pluralForm(value)) {
-                0 -> "день"
-                1 -> "дня"
-                else -> "дней"
-            }
-            }
-        }
-    }
+fun Date.isSameDay(date: Date) : Boolean {
+    return this.time/ DAY.value == date.time/ DAY.value
+}
 
-    private fun pluralForm(value:Long):Int {
-        val absvalue = abs(value)
-        return if (absvalue%10==1L && absvalue%100!=11L) 0
-        else if (absvalue%10>=2L && absvalue%10<=4L && (absvalue%100<10L || absvalue%100>=20L)) 1
-        else 2
-    }
+fun Date.shortFormat(): String? {
+    val pattern = if (this.isSameDay(Date())) "HH:mm" else "dd.MM.yy"
+    val dateFormat = SimpleDateFormat(pattern, Locale("ru"))
+    return dateFormat.format(this)
 }
